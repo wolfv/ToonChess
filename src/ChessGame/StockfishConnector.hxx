@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 
+#include "../constants.hxx"
+
 class StockfishConnector {
 private:
   /* Communication pipes between child and parent processes
@@ -15,6 +17,9 @@ private:
   /* All the moves since the beginning of the game */
   std::string moves;
 
+  /* Game difficulty */
+  int difficultyLevel = DIFFICULTY_EASY;
+
 public:
   /* Constructor */
   StockfishConnector();
@@ -25,13 +30,13 @@ public:
   */
   void startCommunication();
 
-  /* Get the next IA move according to the last user move
+  /* Get the next AI move according to the last user move
     \param userMove The last user move in uci format
-    \return The next IA move in uci format
+    \return The next AI move in uci format
   */
-  std::string getNextIAMove(std::string userMove);
+  std::string getNextAIMove(std::string userMove);
 
-  /* Suggested next user move, "(none)" is nothing is suggested by the IA */
+  /* Suggested next user move, "(none)" is nothing is suggested by the AI */
   std::string suggestedUserMove = "(none)";
 
   /* Destructor, this will properly stop the communication */

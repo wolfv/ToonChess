@@ -6,14 +6,14 @@
 
 ChessGame::ChessGame(){
   // Start communication with stockfish
-  this->stockfishConnector = new StockfishConnector();
+  stockfishConnector = new StockfishConnector();
 
-  this->lastUserMove = "";
-  this->clock = new sf::Clock();
+  lastUserMove = "";
+  clock = new sf::Clock();
 };
 
 void ChessGame::start(){
-  this->stockfishConnector->startCommunication();
+  stockfishConnector->startCommunication();
 }
 
 sf::Vector2i ChessGame::uciFormatToPosition(std::string position){
@@ -21,7 +21,7 @@ sf::Vector2i ChessGame::uciFormatToPosition(std::string position){
   bool found(false);
   for(x = 0; x < 8 and not found; x++){
     for(y = 0; y < 8 and not found; y++){
-      if(this->uciGrid[x][y].compare(position) == 0){
+      if(uciGrid[x][y].compare(position) == 0){
         found = true;
       }
     }
@@ -34,24 +34,7 @@ sf::Vector2i ChessGame::uciFormatToPosition(std::string position){
 };
 
 std::string ChessGame::positionToUciFormat(sf::Vector2i position){
-  return this->uciGrid[position.x][position.y];
-};
-
-void ChessGame::movePiece(sf::Vector2i lastPosition, sf::Vector2i newPosition){
-  int piece = board[lastPosition.x][lastPosition.y];
-
-  board[lastPosition.x][lastPosition.y] = EMPTY;
-  board[newPosition.x][newPosition.y] = piece;
-};
-
-void ChessGame::movePiece(std::string movement){
-  std::string lastPosition_str = movement.substr(0, 2);
-  std::string newPosition_str = movement.substr(2, 2);
-
-  sf::Vector2i lastPosition = uciFormatToPosition(lastPosition_str);
-  sf::Vector2i newPosition = uciFormatToPosition(newPosition_str);
-
-  movePiece(lastPosition, newPosition);
+  return uciGrid[position.x][position.y];
 };
 
 const int ChessGame::boardAt(int x, int y){
@@ -202,14 +185,14 @@ void ChessGame::computeKINGNextPositions(sf::Vector2i position){
 
 void ChessGame::computeAllowedNextPositions(){
   // Reset matrix
-  this->resetAllowedNextPositions();
+  resetAllowedNextPositions();
 
   // Get the selected piece
-  sf::Vector2i piecePosition = this->selectedPiecePosition;
+  sf::Vector2i piecePosition = selectedPiecePosition;
   const int piece = boardAt(piecePosition.x, piecePosition.y);
 
   // If the new selected piece position is {-1, -1} which means that nothing is
-  // selected, or if the new selected piece is one of IA's pieces (< 0), or if
+  // selected, or if the new selected piece is one of AI's pieces (< 0), or if
   // the selected position corresponds to an EMPTY space (== 0), we only reset
   // the allowedNextPositions matrix
   if((piecePosition.x == -1 and piecePosition.y == -1) or
@@ -248,101 +231,141 @@ void ChessGame::computeAllowedNextPositions(){
 void ChessGame::resetAllowedNextPositions(){
   for(int x = 0; x < 8; x++)
     for(int y = 0; y < 8; y++)
-      this->allowedNextPositions[x][y] = false;
+      allowedNextPositions[x][y] = false;
 };
 
 void ChessGame::setNewSelectedPiecePosition(
     sf::Vector2i newSelectedPiecePosition){
-  // Register last user clicked position
-  this->oldSelectedPiecePosition = this->selectedPiecePosition;
+  if(state == USER_TURN){
+    // Register last user clicked position
+    oldSelectedPiecePosition = selectedPiecePosition;
 
-  // And set the new selected piece position
-  this->selectedPiecePosition = newSelectedPiecePosition;
+    // And set the new selected piece position
+    selectedPiecePosition = newSelectedPiecePosition;
 
-  // If the new selected piece is an allowed move, it surely means that the user
-  // wants to move a piece: it will be performed at the next "perform" method
-  // call
-  if(allowedNextPositions[this->selectedPiecePosition.x]
-                         [this->selectedPiecePosition.y] == true){
-    return;
+    // If the new selected piece is an allowed move, it surely means that the user
+    // wants to move a piece: it will be performed at the next "perform" method
+    // call
+    if(allowedNextPositions[selectedPiecePosition.x]
+                           [selectedPiecePosition.y] == true){
+      return;
+    }
+
+    // In other cases, compute the new allowedNextPositions matrix
+    computeAllowedNextPositions();
   }
-
-  // In other cases, compute the new allowedNextPositions matrix
-  this->computeAllowedNextPositions();
 };
 
 void ChessGame::perform(){
-  switch (this->state) {
-    case USER_TURN: {
-      // If the selected position is an allowed move, it surely means that the
-      // user wants to move a piece
-      if(allowedNextPositions[this->selectedPiecePosition.x]
-                             [this->selectedPiecePosition.y] == true){
-        // Move the piece
-        movePiece(this->oldSelectedPiecePosition, this->selectedPiecePosition);
+  if(state == USER_TURN) {
+    // If the selected position is an allowed move, it surely means that the
+    // user wants to move a piece
+    if(allowedNextPositions[selectedPiecePosition.x]
+                           [selectedPiecePosition.y] == true){
+      // Set the currently moving piece
+      movingPiece = boardAt(
+        oldSelectedPiecePosition.x, oldSelectedPiecePosition.y);
+      movingPieceStartPosition = oldSelectedPiecePosition;
+      movingPieceEndPosition = selectedPiecePosition;
+      movingPiecePosition = {
+        (float)movingPieceStartPosition.x, (float)movingPieceStartPosition.y
+      };
 
-        // Store the last user move as an UCI string
-        this->lastUserMove.clear();
-        this->lastUserMove.append(
-          positionToUciFormat(this->oldSelectedPiecePosition));
-        this->lastUserMove.append(
-          positionToUciFormat(this->selectedPiecePosition));
+      // Remove the piece from its old position
+      board[oldSelectedPiecePosition.x][oldSelectedPiecePosition.y] = EMPTY;
 
-        // Unselect piece
-        this->oldSelectedPiecePosition = {-1, -1};
-        this->selectedPiecePosition = {-1, -1};
+      // Store the last user move as an UCI string
+      lastUserMove.clear();
+      lastUserMove.append(
+        positionToUciFormat(oldSelectedPiecePosition));
+      lastUserMove.append(
+        positionToUciFormat(selectedPiecePosition));
 
-        // Reset allowedNextPositions matrix
-        this->resetAllowedNextPositions();
+      // Unselect piece
+      oldSelectedPiecePosition = {-1, -1};
+      selectedPiecePosition = {-1, -1};
 
-        // Transition to waiting state and restart the clock for measuring
-        // waiting time
-        this->state = WAITING;
-        this->clock->restart();
-      }
-      break;
+      // Reset allowedNextPositions matrix
+      resetAllowedNextPositions();
+
+      // Transition to the next state
+      state = USER_MOVING;
+      clock->restart();
     }
-    case WAITING: {
-      if(this->clock->getElapsedTime().asSeconds() >= 1.0)
-        this->state = IA_TURN;
-      break;
+  }
+  else if(state == USER_MOVING or state == AI_MOVING) {
+    float elapsedTime = clock->getElapsedTime().asSeconds();
+    if(elapsedTime < 1.0){
+      movingPiecePosition = {
+        elapsedTime * movingPieceEndPosition.x + (1 - elapsedTime) * movingPieceStartPosition.x,
+        elapsedTime * movingPieceEndPosition.y + (1 - elapsedTime) * movingPieceStartPosition.y
+      };
+    } else {
+      // Add the moving piece to its end position
+      board[movingPieceEndPosition.x][movingPieceEndPosition.y] = movingPiece;
+
+      // Reset attributes
+      movingPiece = EMPTY;
+      movingPiecePosition = {-1, -1};
+      movingPieceStartPosition = {-1, -1};
+      movingPieceEndPosition = {-1, -1};
+
+      // Transition to waiting state if it's the next turn is the AI turn, USER_TURN otherwise.
+      state = state == USER_MOVING ? WAITING : USER_TURN;
+      clock->restart();
     }
-    case IA_TURN: {
-      // Get IA decision according to the last user move
-      std::string iaMove = stockfishConnector->getNextIAMove(
-        this->lastUserMove);
-
-      // If the IA tried to move one user's pawn, stop the game
-      sf::Vector2i iaMoveStartPosition = uciFormatToPosition(
-        iaMove.substr(0, 2));
-      if(boardAt(iaMoveStartPosition.x, iaMoveStartPosition.y) >= 0){
-        throw GameException("A forbiden move has been performed!");
-      }
-
-      movePiece(iaMove);
-
-      // Get suggested user next move if available
-      if(stockfishConnector->suggestedUserMove.compare("(none)") != 0){
-        std::string startPosition_str = \
-          stockfishConnector->suggestedUserMove.substr(0, 2);
-        std::string endPosition_str = \
-          stockfishConnector->suggestedUserMove.substr(2, 2);
-
-        suggestedUserMoveStartPosition = uciFormatToPosition(startPosition_str);
-        suggestedUserMoveEndPosition = uciFormatToPosition(endPosition_str);
-      }else{
-        suggestedUserMoveStartPosition = {-1, -1};
-        suggestedUserMoveEndPosition = {-1, -1};
-      }
-
-      // Transition to USER_TURN state
-      this->state = USER_TURN;
-      break;
+  }
+  else if(state == WAITING) {
+    if(clock->getElapsedTime().asSeconds() >= 1.0){
+      state = AI_TURN;
+      clock->restart();
     }
+  }
+  else if(state == AI_TURN) {
+    // Get AI decision according to the last user move
+    std::string aiMove = stockfishConnector->getNextAIMove(
+      lastUserMove);
+
+    // If the AI tried to move one user's pawn, stop the game
+    sf::Vector2i aiMoveStartPosition = uciFormatToPosition(
+      aiMove.substr(0, 2));
+    if(boardAt(aiMoveStartPosition.x, aiMoveStartPosition.y) >= 0){
+      throw GameException("A forbiden move has been performed!");
+    }
+
+    // Set the currently moving piece
+    movingPiece = boardAt(aiMoveStartPosition.x, aiMoveStartPosition.y);
+    movingPieceStartPosition = aiMoveStartPosition;
+    movingPieceEndPosition = uciFormatToPosition(
+      aiMove.substr(2, 2));;
+    movingPiecePosition = {
+      (float)aiMoveStartPosition.x, (float)aiMoveStartPosition.y
+    };
+
+    // Remove the piece from its old position
+    board[aiMoveStartPosition.x][aiMoveStartPosition.y] = EMPTY;
+
+    // Get suggested user next move if available
+    if(stockfishConnector->suggestedUserMove.compare("(none)") != 0){
+      std::string startPosition_str = \
+        stockfishConnector->suggestedUserMove.substr(0, 2);
+      std::string endPosition_str = \
+        stockfishConnector->suggestedUserMove.substr(2, 2);
+
+      suggestedUserMoveStartPosition = uciFormatToPosition(startPosition_str);
+      suggestedUserMoveEndPosition = uciFormatToPosition(endPosition_str);
+    }else{
+      suggestedUserMoveStartPosition = {-1, -1};
+      suggestedUserMoveEndPosition = {-1, -1};
+    }
+
+    // Transition to AI_MOVING state
+    state = AI_MOVING;
+    clock->restart();
   }
 };
 
 ChessGame::~ChessGame(){
-  delete this->stockfishConnector;
-  delete this->clock;
+  delete stockfishConnector;
+  delete clock;
 };

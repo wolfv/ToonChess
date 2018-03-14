@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "../../src/mesh/Mesh.hxx"
+#include "../../src/mesh/loadObjFile.hxx"
 
 TEST(extract_float_vec, can_extract) {
   std::vector<std::string> in = {"v", "1.2", "3.5", "6.2"};
@@ -67,69 +68,79 @@ TEST(extract_normal, can_extract) {
   EXPECT_EQ(3.2f, out[8]);
 }
 
-TEST(mesh, init) {
-  Mesh* test = new Mesh("../tests/testFixtures/test.obj");
-
-  EXPECT_EQ("../tests/testFixtures/test.obj", test->filePath);
-
-  delete test;
-}
-
 TEST(mesh, vertices) {
-  Mesh* test = new Mesh("../tests/testFixtures/test.obj");
+  std::vector<Mesh *> meshes = loadObjFile("../tests/testFixtures/test.obj");
 
-  test->initBuffers();
+  EXPECT_EQ(0.0, meshes.at(0)->vertices.at(0));
+  EXPECT_EQ(0.0, meshes.at(0)->vertices.at(1));
+  EXPECT_EQ(0.0, meshes.at(0)->vertices.at(2));
 
-  EXPECT_EQ(0.0, test->vertices.at(0));
-  EXPECT_EQ(0.0, test->vertices.at(1));
-  EXPECT_EQ(0.0, test->vertices.at(2));
+  EXPECT_EQ(1.0, meshes.at(0)->vertices.at(3));
+  EXPECT_EQ(1.0, meshes.at(0)->vertices.at(4));
+  EXPECT_EQ(0.0, meshes.at(0)->vertices.at(5));
 
-  EXPECT_EQ(1.0, test->vertices.at(3));
-  EXPECT_EQ(1.0, test->vertices.at(4));
-  EXPECT_EQ(0.0, test->vertices.at(5));
+  EXPECT_EQ(0.0, meshes.at(0)->vertices.at(21));
+  EXPECT_EQ(1.0, meshes.at(0)->vertices.at(22));
+  EXPECT_EQ(1.0, meshes.at(0)->vertices.at(23));
 
-  EXPECT_EQ(0.0, test->vertices.at(21));
-  EXPECT_EQ(1.0, test->vertices.at(22));
-  EXPECT_EQ(1.0, test->vertices.at(23));
-
-  delete test;
+  for(unsigned int i = 0; i < meshes.size(); i++)
+      delete meshes.at(i);
+  meshes.clear();
 }
 
 TEST(mesh, indices) {
-  Mesh* test = new Mesh("../tests/testFixtures/test.obj");
+  std::vector<Mesh *> meshes = loadObjFile("../tests/testFixtures/test.obj");
 
-  test->initBuffers();
+  EXPECT_EQ(0, meshes.at(0)->indices.at(0));
+  EXPECT_EQ(1, meshes.at(0)->indices.at(1));
+  EXPECT_EQ(2, meshes.at(0)->indices.at(2));
 
-  EXPECT_EQ(0, test->indices.at(0));
-  EXPECT_EQ(1, test->indices.at(1));
-  EXPECT_EQ(2, test->indices.at(2));
+  EXPECT_EQ(3, meshes.at(0)->indices.at(3));
+  EXPECT_EQ(4, meshes.at(0)->indices.at(4));
+  EXPECT_EQ(5, meshes.at(0)->indices.at(5));
 
-  EXPECT_EQ(3, test->indices.at(3));
-  EXPECT_EQ(4, test->indices.at(4));
-  EXPECT_EQ(5, test->indices.at(5));
+  EXPECT_EQ(33, meshes.at(0)->indices.at(33));
+  EXPECT_EQ(34, meshes.at(0)->indices.at(34));
+  EXPECT_EQ(35, meshes.at(0)->indices.at(35));
 
-  EXPECT_EQ(33, test->indices.at(33));
-  EXPECT_EQ(34, test->indices.at(34));
-  EXPECT_EQ(35, test->indices.at(35));
+  EXPECT_EQ(meshes.at(0)->indices.size(), meshes.at(0)->vertices.size()/3);
+  EXPECT_EQ(meshes.at(0)->indices.size(), meshes.at(0)->normals.size()/3);
 
-  EXPECT_EQ(test->indices.size(), test->vertices.size()/3);
-  EXPECT_EQ(test->indices.size(), test->normals.size()/3);
-
-  delete test;
+  for(unsigned int i = 0; i < meshes.size(); i++)
+    delete meshes.at(i);
+  meshes.clear();
 }
 
 TEST(mesh, normals) {
-  Mesh* test = new Mesh("../tests/testFixtures/test.obj");
+  std::vector<Mesh *> meshes = loadObjFile("../tests/testFixtures/test.obj");
 
-  test->initBuffers();
+  EXPECT_EQ(0.0f, meshes.at(0)->normals.at(0));
+  EXPECT_EQ(0.0f, meshes.at(0)->normals.at(1));
+  EXPECT_EQ(-1.32f, meshes.at(0)->normals.at(2));
 
-  EXPECT_EQ(0.0f, test->normals.at(0));
-  EXPECT_EQ(0.0f, test->normals.at(1));
-  EXPECT_EQ(-1.32f, test->normals.at(2));
+  EXPECT_EQ(-1.26f, meshes.at(0)->normals.at(18));
+  EXPECT_EQ(0.0f, meshes.at(0)->normals.at(19));
+  EXPECT_EQ(0.0f, meshes.at(0)->normals.at(20));
 
-  EXPECT_EQ(-1.26f, test->normals.at(18));
-  EXPECT_EQ(0.0f, test->normals.at(19));
-  EXPECT_EQ(0.0f, test->normals.at(20));
+  for(unsigned int i = 0; i < meshes.size(); i++)
+    delete meshes.at(i);
+  meshes.clear();
+}
 
-  delete test;
+TEST(mesh, second_mesh) {
+  std::vector<Mesh*> meshes = loadObjFile("../tests/testFixtures/test.obj");
+
+  EXPECT_NE(meshes.at(0), meshes.at(1));
+
+  EXPECT_EQ(0.0f, meshes.at(1)->normals.at(0));
+  EXPECT_EQ(0.0f, meshes.at(1)->normals.at(1));
+  EXPECT_EQ(-1.36f, meshes.at(1)->normals.at(2));
+
+  EXPECT_EQ(-1.52f, meshes.at(1)->normals.at(18));
+  EXPECT_EQ(0.0f, meshes.at(1)->normals.at(19));
+  EXPECT_EQ(0.0f, meshes.at(1)->normals.at(20));
+
+  for(unsigned int i = 0; i < meshes.size(); i++)
+    delete meshes.at(i);
+  meshes.clear();
 }

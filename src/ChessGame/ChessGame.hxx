@@ -18,10 +18,11 @@ private:
   /* The connector with Stockfish */
   StockfishConnector* stockfishConnector;
 
-  /* The state of the game, should be USER_TURN, IA_TURN or WAITING */
+  /* The state of the game, should be USER_TURN, AI_TURN or WAITING */
   int state = USER_TURN;
 
-  /* Clock used for waiting between the USER_TURN and the IA_TURN */
+  /* Clock used for measuring time during piece movement and
+  waiting between the USER_TURN and the AI_TURN */
   sf::Clock* clock;
 
   /* Grid used for conversions between position and UCI format */
@@ -50,22 +51,6 @@ private:
   */
   std::string positionToUciFormat(sf::Vector2i position);
 
-  /* Move function, this will move a chess piece on the board
-    \param lastPosition The last position of the piece to move
-    \param newPosition The new position of the piece to move
-  */
-  void movePiece(sf::Vector2i lastPosition, sf::Vector2i newPosition);
-
-  /* Move function, this will move a chess piece on the board
-    \param movement The movement in the UCI format "a2a4"
-  */
-  void movePiece(std::string movement);
-
-  /* Method used for accessing piece at position {x, y}, if {x, y} doesn't
-  correspond to a position on the board, it returns OUT_OF_BOUND constant and
-  doesn't throw exception */
-  const int boardAt(int x, int y);
-
   /* Compute the allowedNextPositions matrix for a specific piece */
   void computePAWNNextPositions(sf::Vector2i position);
   void computeROOKNextPositions(sf::Vector2i position);
@@ -81,7 +66,7 @@ private:
 
 public:
   /* Constructor */
-  ChessGame();
+  explicit ChessGame();
 
   /* The checkerboard */
   int board[8][8] = {
@@ -106,6 +91,11 @@ public:
     {false, false, false, false, false, false, false, false},
     {false, false, false, false, false, false, false, false}
   };
+
+  /* Method used for accessing piece at position {x, y}, if {x, y} doesn't
+  correspond to a position on the board, it returns OUT_OF_BOUND constant and
+  doesn't throw exception */
+  const int boardAt(int x, int y);
 
   /* Position of the currently selected chess piece {-1, -1} if nothing is
   selected */
@@ -134,11 +124,22 @@ public:
 
   /* Perform the chess rules depending on the game state, if it's the USER_TURN
     it will move one chess piece according to the currently clicked piece, if
-    it's WAITING it will wait one second before changing to IA_TURN, if it's
-    IA_TURN it will ask Stockfish what is the next IA move
+    it's WAITING it will wait one second before changing to AI_TURN, if it's
+    AI_TURN it will ask Stockfish what is the next AI move
     \throw GameException if chess rules are not respected
   */
   void perform();
+
+  /* Currently moving piece: KING, QUEEN, ... EMPTY if nothing is currently
+  moving */
+  int movingPiece = EMPTY;
+
+  /* Currently moving piece position */
+  sf::Vector2f movingPiecePosition = {-1, -1};
+
+  /* The start and end position of the currently moving piece */
+  sf::Vector2i movingPieceStartPosition = {-1, -1};
+  sf::Vector2i movingPieceEndPosition = {-1, -1};
 
   /* Destructor */
   ~ChessGame();

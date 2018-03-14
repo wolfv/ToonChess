@@ -22,8 +22,10 @@ const int AI = -1;
 
 // State machine for the game
 const int USER_TURN = 0;
-const int WAITING = 1;
-const int IA_TURN = 2;
+const int USER_MOVING = 1;
+const int WAITING = 2;
+const int AI_TURN = 3;
+const int AI_MOVING = 4;
 
 // Shaders
 const int BLACK_BORDER = 10;
@@ -44,5 +46,11 @@ const int SHADOWMAPPING_VERYLOW = 256;
 const int ANTIALIASING_HIGH = 4;
 const int ANTIALIASING_LOW = 2;
 const int ANTIALIASING_NONE = 0;
+
+// Game difficulty
+const int DIFFICULTY_VERY_HIGH = 20;
+const int DIFFICULTY_HIGH = 15;
+const int DIFFICULTY_NORMAL = 5;
+const int DIFFICULTY_EASY = 0;
 
 #endif
